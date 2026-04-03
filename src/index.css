@@ -1,0 +1,195 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* ─────────────────────────────────────────────────────────
+   DESIGN TOKENS — Glassmorphism blue/violet palette
+   matching the reference image aesthetic
+───────────────────────────────────────────────────────── */
+:root {
+  /* Core radii & transitions */
+  --r-sm:  8px;
+  --r-md:  14px;
+  --r-lg:  20px;
+  --r-xl:  28px;
+  --t:     .2s cubic-bezier(.4,0,.2,1);
+
+  /* Fonts */
+  --f-display: 'Plus Jakarta Sans', sans-serif;
+  --f-body:    'Inter', sans-serif;
+}
+
+/* DARK (default) */
+.dark, :root {
+  --bg-root:        #0b0e1a;
+  --bg-layer:       #0f1225;
+  --bg-elevated:    #141830;
+
+  /* Glass surfaces */
+  --glass-bg:       rgba(255,255,255,.055);
+  --glass-bg-hover: rgba(255,255,255,.08);
+  --glass-bg-active:rgba(139,92,246,.18);
+  --glass-border:   rgba(255,255,255,.1);
+  --glass-border-strong: rgba(139,92,246,.35);
+
+  /* Sidebar specific */
+  --sidebar-bg:     rgba(89,52,186,.22);
+  --sidebar-border: rgba(139,92,246,.2);
+  --sidebar-active-bg: rgba(255,255,255,.15);
+  --sidebar-active-border: rgba(255,255,255,.3);
+
+  /* Typography */
+  --text-primary:   #f0f2ff;
+  --text-secondary: rgba(210,215,255,.55);
+  --text-muted:     rgba(210,215,255,.3);
+
+  /* Brand gradient — purple→blue→cyan (matches image) */
+  --grad-primary:   linear-gradient(135deg, #7c3aed 0%, #3b82f6 60%, #06b6d4 100%);
+  --grad-card-1:    linear-gradient(140deg, #6366f1 0%, #3b82f6 100%);
+  --grad-card-2:    linear-gradient(140deg, #7c3aed 0%, #ec4899 100%);
+  --grad-card-3:    linear-gradient(140deg, #3b82f6 0%, #06b6d4 100%);
+  --grad-card-4:    linear-gradient(140deg, #8b5cf6 0%, #6366f1 100%);
+
+  /* Semantic */
+  --c-success:  #34d399;
+  --c-danger:   #fb7185;
+  --c-warning:  #fbbf24;
+  --c-info:     #60a5fa;
+
+  /* Glows */
+  --glow-purple: rgba(139,92,246,.3);
+  --glow-blue:   rgba(59,130,246,.25);
+  --glow-cyan:   rgba(6,182,212,.2);
+
+  /* Shadow */
+  --shadow-card: 0 8px 32px rgba(0,0,0,.45);
+  --shadow-modal:0 24px 64px rgba(0,0,0,.65);
+}
+
+/* LIGHT */
+:root:not(.dark), .light {
+  --bg-root:        #dde4f5;
+  --bg-layer:       #e4ebf8;
+  --bg-elevated:    #edf2fc;
+
+  --glass-bg:       rgba(255,255,255,.55);
+  --glass-bg-hover: rgba(255,255,255,.75);
+  --glass-bg-active:rgba(109,40,217,.1);
+  --glass-border:   rgba(109,40,217,.15);
+  --glass-border-strong: rgba(109,40,217,.3);
+
+  --sidebar-bg:     rgba(109,40,217,.12);
+  --sidebar-border: rgba(109,40,217,.15);
+  --sidebar-active-bg: rgba(109,40,217,.18);
+  --sidebar-active-border: rgba(109,40,217,.35);
+
+  --text-primary:   #0d0f1e;
+  --text-secondary: rgba(15,18,40,.55);
+  --text-muted:     rgba(15,18,40,.35);
+
+  --glow-purple: rgba(109,40,217,.15);
+  --glow-blue:   rgba(37,99,235,.12);
+  --glow-cyan:   rgba(8,145,178,.1);
+
+  --shadow-card: 0 8px 32px rgba(109,40,217,.12);
+  --shadow-modal:0 24px 64px rgba(109,40,217,.2);
+}
+
+/* ─────────────────────────────────────────────────────────
+   BASE
+───────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 15px; }
+
+body {
+  font-family: var(--f-body);
+  background: var(--bg-root);
+  color: var(--text-primary);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background .3s, color .3s;
+  overflow-x: hidden;
+}
+
+/* Ambient background matching the photo */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 900px 700px at 85%  -5%, rgba(139,92,246,.22) 0%, transparent 60%),
+    radial-gradient(ellipse 600px 500px at -5% 100%, rgba(59,130,246,.18) 0%, transparent 55%),
+    radial-gradient(ellipse 400px 400px at 50%  50%, rgba(6,182,212,.06) 0%,  transparent 70%);
+}
+
+/* Subtle grid */
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+/* ─────────────────────────────────────────────────────────
+   GLASS SYSTEM
+───────────────────────────────────────────────────────── */
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-radius: var(--r-lg);
+}
+
+.glass-sm {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: var(--r-md);
+}
+
+/* ─────────────────────────────────────────────────────────
+   SCROLLBAR
+───────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(139,92,246,.3); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(139,92,246,.6); }
+
+/* ─────────────────────────────────────────────────────────
+   ANIMATIONS
+───────────────────────────────────────────────────────── */
+@keyframes fadeUp   { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:none } }
+@keyframes fadeIn   { from { opacity:0 } to { opacity:1 } }
+@keyframes slideIn  { from { opacity:0; transform:translateX(-12px) } to { opacity:1; transform:none } }
+@keyframes scaleIn  { from { opacity:0; transform:scale(.96) } to { opacity:1; transform:scale(1) } }
+@keyframes pulseDot { 0%,100%{opacity:1} 50%{opacity:.3} }
+@keyframes shimmer  {
+  0%   { background-position: -200% 0 }
+  100% { background-position:  200% 0 }
+}
+
+.anim-fade-up  { animation: fadeUp   .35s cubic-bezier(.4,0,.2,1) both; }
+.anim-fade-in  { animation: fadeIn   .25s ease both; }
+.anim-scale-in { animation: scaleIn  .3s  cubic-bezier(.4,0,.2,1) both; }
+
+/* Stagger helper */
+.stagger-1 { animation-delay: .05s; }
+.stagger-2 { animation-delay: .10s; }
+.stagger-3 { animation-delay: .15s; }
+.stagger-4 { animation-delay: .20s; }
+
+/* Skeleton shimmer */
+.skeleton {
+  background: linear-gradient(90deg,
+    rgba(255,255,255,.04) 25%,
+    rgba(255,255,255,.09) 50%,
+    rgba(255,255,255,.04) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--r-sm);
+}
