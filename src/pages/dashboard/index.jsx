@@ -1,34 +1,109 @@
-import { TrendingUp, TrendingDown, DollarSign, Layers, RefreshCw } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { TrendingUp, TrendingDown, DollarSign, Layers, RefreshCw, Loader } from 'lucide-react'
 import { StatCard, Card, ProgressBar, Button, Badge, Table, Thead, Th, Td, Tr } from '@/components/ui'
 import { AreaChartWidget } from '@/components/charts/AreaChart.jsx'
 import { fKz, fDate } from '@/lib/utils'
-
-const MONTH_DATA = [
-  { mes: 'Out', receita: 420000, despesa: 168000 },
-  { mes: 'Nov', receita: 380000, despesa: 152000 },
-  { mes: 'Dez', receita: 510000, despesa: 204000 },
-  { mes: 'Jan', receita: 460000, despesa: 184000 },
-  { mes: 'Fev', receita: 530000, despesa: 212000 },
-  { mes: 'Mar', receita: 580000, despesa: 212500 },
-]
-
-const RECENT = [
-  { id: 1, tipo: 'entrada', descricao: 'Mensalidade Fibra — A. Santos',   categoria: 'Internet',   valor: 45000, data: new Date() },
-  { id: 2, tipo: 'saida',   descricao: 'Fornecedor Fibra Óptica',          categoria: 'Fornecedor', valor: 85000, data: new Date(Date.now() - 86400000) },
-  { id: 3, tipo: 'entrada', descricao: 'Instalação — Bairro Rangel',       categoria: 'Instalação', valor: 35000, data: new Date(Date.now() - 86400000 * 2) },
-  { id: 4, tipo: 'saida',   descricao: 'Folha Salarial — Março',           categoria: 'Salários',   valor: 120000, data: new Date(Date.now() - 86400000 * 4) },
-  { id: 5, tipo: 'entrada', descricao: 'Suporte Técnico Remoto',           categoria: 'Suporte',    valor: 9500,  data: new Date(Date.now() - 86400000 * 5) },
-]
-
-const DESPESAS_CAT = [
-  { label: 'Salários',     pct: 45, color: '#7c3aed' },
-  { label: 'Fornecedores', pct: 28, color: '#3b82f6' },
-  { label: 'Operacional',  pct: 18, color: '#06b6d4' },
-  { label: 'Outros',       pct: 9,  color: '#8b5cf6' },
-]
+import { api } from '@/lib/api'
 
 export default function Dashboard() {
+  const [loading, setLoading] = useState(true)
+  const [receita, setReceita] = useState(0)
+  const [despesa, setDespesa] = useState(0)
+  const [saldo, setSaldo] = useState(0)
+  const [servicos, setServicos] = useState(0)
+  const [monthData, setMonthData] = useState([])
+  const [despesasCat, setDespesasCat] = useState([])
+  const [recent, setRecent] = useState([])
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      const [fluxoData, servicosData] = await Promise.all([
+        api.get('/fluxo'),
+        api.get('/servicos'),
+      ])
+
+      const rows = Array.isArray(fluxoData) ? fluxoData : fluxoData.data || []
+      const services = Array.isArray(servicosData) ? servicosData : servicosData.data || []
+
+      // Calcular receita, despesa, saldo
+      const totalReceita = rows
+        .filter(r => r.tipo === 'entrada')
+        .reduce((sum, r) => sum + (parseFloat(r.valor) || 0), 0)
+      const totalDespesa = rows
+        .filter(r => r.tipo === 'saida')
+        .reduce((sum, r) => sum + (parseFloat(r.valor) || 0), 0)
+      const totalSaldo = totalReceita - totalDespesa
+
+      setReceita(totalReceita)
+      setDespesa(totalDespesa)
+      setSaldo(totalSaldo)
+      setServicos(services.length)
+
+      // Agrupar por mês para o gráfico (últimos 6 meses)
+      const monthMap = {}
+      const now = new Date()
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+        const key = d.toLocaleDateString('pt-AO', { month: 'short', year: '2-digit' })
+        monthMap[key] = { mes: key.split(' ')[0].charAt(0).toUpperCase() + key.split(' ')[0].slice(1), receita: 0, despesa: 0 }
+      }
+
+      rows.forEach(r => {
+        const date = new Date(r.data_tx)
+        const key = date.toLocaleDateString('pt-AO', { month: 'short', year: '2-digit' })
+        if (monthMap[key]) {
+          if (r.tipo === 'entrada') monthMap[key].receita += parseFloat(r.valor) || 0
+          else monthMap[key].despesa += parseFloat(r.valor) || 0
+        }
+      })
+
+      setMonthData(Object.values(monthMap))
+
+      // Calcular despesas por categoria
+      const catMap = {}
+      rows
+        .filter(r => r.tipo === 'saida')
+        .forEach(r => {
+          const cat = r.categoria || 'Outros'
+          catMap[cat] = (catMap[cat] || 0) + (parseFloat(r.valor) || 0)
+        })
+
+      const total = Object.values(catMap).reduce((a, b) => a + b, 0) || 1
+      const cats = Object.entries(catMap).map(([label, value]) => ({
+        label,
+        pct: Math.round((value / total) * 100),
+        color: ['#7c3aed', '#3b82f6', '#06b6d4', '#8b5cf6', '#ec4899'][Object.keys(catMap).indexOf(label) % 5],
+      }))
+
+      setDespesasCat(cats)
+
+      // Transações recentes (últimas 10)
+      const recentTx = rows
+        .sort((a, b) => new Date(b.data_tx) - new Date(a.data_tx))
+        .slice(0, 10)
+
+      setRecent(recentTx)
+    } catch (err) {
+      console.error('Erro ao carregar dados:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const today = new Date().toLocaleDateString('pt-AO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 400 }}>
+        <Loader size={32} style={{ animation: 'spin 2s linear infinite' }} />
+      </div>
+    )
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -39,17 +114,17 @@ export default function Dashboard() {
           <h2 style={{ fontFamily: 'var(--f-display)', fontSize: 22, fontWeight: 800, letterSpacing: '-.02em' }}>Visão Geral</h2>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 3, textTransform: 'capitalize' }}>{today}</p>
         </div>
-        <Button variant="ghost" size="sm" style={{ gap: 6 }}>
+        <Button variant="ghost" size="sm" style={{ gap: 6 }} onClick={fetchData}>
           <RefreshCw size={13} strokeWidth={2} />
           Actualizar
         </Button>
       </div>
 
       {/* KPI row — 4 cards like the image */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 14 }}>
         <StatCard
           label="Receita do Mês"
-          value={fKz(580000)}
+          value={fKz(receita)}
           change="12%"
           changeUp
           icon={TrendingUp}
@@ -57,7 +132,7 @@ export default function Dashboard() {
         />
         <StatCard
           label="Despesas do Mês"
-          value={fKz(212500)}
+          value={fKz(despesa)}
           change="5%"
           changeUp={false}
           icon={TrendingDown}
@@ -65,16 +140,16 @@ export default function Dashboard() {
         />
         <StatCard
           label="Lucro Líquido"
-          value={fKz(367500)}
-          change="18%"
-          changeUp
+          value={fKz(saldo)}
+          change={saldo >= 0 ? "18%" : "-5%"}
+          changeUp={saldo >= 0}
           icon={DollarSign}
           gradient="var(--grad-card-3)"
         />
         <StatCard
           label="Serviços Activos"
-          value="24"
-          change="+3"
+          value={servicos.toString()}
+          change="+2"
           changeUp
           icon={Layers}
           gradient="var(--grad-card-4)"
@@ -82,7 +157,7 @@ export default function Dashboard() {
       </div>
 
       {/* Charts row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14 }}>
 
         {/* Area chart */}
         <Card>
@@ -100,28 +175,38 @@ export default function Dashboard() {
               ))}
             </div>
           </div>
-          <AreaChartWidget
-            data={MONTH_DATA}
-            series={[
-              { key: 'receita', label: 'Receita',  color: '#7c3aed' },
-              { key: 'despesa', label: 'Despesas', color: '#fb7185' },
-            ]}
-            height={210}
-          />
+          {monthData.length > 0 ? (
+            <AreaChartWidget
+              data={monthData}
+              series={[
+                { key: 'receita', label: 'Receita',  color: '#7c3aed' },
+                { key: 'despesa', label: 'Despesas', color: '#fb7185' },
+              ]}
+              height={210}
+            />
+          ) : (
+            <div style={{ height: 210, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+              Sem dados para exibir
+            </div>
+          )}
         </Card>
 
         {/* Despesas breakdown */}
         <Card>
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 18 }}>Despesas por Categoria</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {DESPESAS_CAT.map(d => (
-              <ProgressBar key={d.label} label={d.label} value={d.pct} color={d.color} showPct />
-            ))}
+            {despesasCat.length > 0 ? (
+              despesasCat.map(d => (
+                <ProgressBar key={d.label} label={d.label} value={d.pct} color={d.color} showPct />
+              ))
+            ) : (
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Sem despesas</div>
+            )}
           </div>
 
           <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--glass-border)' }}>
             <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>Total Despesas (mês)</div>
-            <div style={{ fontFamily: 'var(--f-display)', fontSize: 22, fontWeight: 800 }}>{fKz(212500)}</div>
+            <div style={{ fontFamily: 'var(--f-display)', fontSize: 22, fontWeight: 800 }}>{fKz(despesa)}</div>
           </div>
         </Card>
       </div>
@@ -143,17 +228,21 @@ export default function Dashboard() {
             </tr>
           </Thead>
           <tbody>
-            {RECENT.map(tx => (
-              <Tr key={tx.id}>
-                <Td><Badge variant={tx.tipo === 'entrada' ? 'green' : 'red'}>{tx.tipo === 'entrada' ? 'Entrada' : 'Saída'}</Badge></Td>
-                <Td style={{ fontWeight: 500 }}>{tx.descricao}</Td>
-                <Td><Badge variant="gray">{tx.categoria}</Badge></Td>
-                <Td style={{ fontWeight: 600, color: tx.tipo === 'entrada' ? 'var(--c-success)' : 'var(--c-danger)' }}>
-                  {tx.tipo === 'entrada' ? '+' : '-'}{fKz(tx.valor)}
-                </Td>
-                <Td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{fDate(tx.data)}</Td>
-              </Tr>
-            ))}
+            {recent.length > 0 ? (
+              recent.map(tx => (
+                <Tr key={tx.id}>
+                  <Td><Badge variant={tx.tipo === 'entrada' ? 'green' : 'red'}>{tx.tipo === 'entrada' ? 'Entrada' : 'Saída'}</Badge></Td>
+                  <Td style={{ fontWeight: 500 }}>{tx.descricao}</Td>
+                  <Td><Badge variant="gray">{tx.categoria || 'N/A'}</Badge></Td>
+                  <Td style={{ fontWeight: 600, color: tx.tipo === 'entrada' ? 'var(--c-success)' : 'var(--c-danger)' }}>
+                    {tx.tipo === 'entrada' ? '+' : '-'}{fKz(tx.valor)}
+                  </Td>
+                  <Td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{fDate(new Date(tx.data_tx))}</Td>
+                </Tr>
+              ))
+            ) : (
+              <Tr><Td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>Sem transacções recentes</Td></Tr>
+            )}
           </tbody>
         </Table>
       </Card>

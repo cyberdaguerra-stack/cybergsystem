@@ -193,3 +193,102 @@ body::after {
   animation: shimmer 1.5s infinite;
   border-radius: var(--r-sm);
 }
+
+/* ─────────────────────────────────────────────────────────
+   RESPONSIVE DESIGN
+───────────────────────────────────────────────────────── */
+
+/* MOBILE FIRST - Small devices (320px and up) */
+@media (max-width: 640px) {
+  :root {
+    --r-sm:  6px;
+    --r-md:  10px;
+    --r-lg:  14px;
+  }
+
+  body {
+    font-size: 14px;
+  }
+
+  h1, h2 { font-size: clamp(18px, 5vw, 24px); }
+  h3 { font-size: clamp(15px, 4vw, 20px); }
+
+  /* Adjust main padding for bottom nav */
+  main {
+    padding: 12px !important;
+    padding-bottom: calc(12px + 90px) !important;
+  }
+
+  /* Stack grids on mobile */
+  [style*="gridTemplateColumns"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Make tables scrollable */
+  table { font-size: 12px; }
+  th, td { padding: 8px 10px; }
+
+  /* Adjust button sizes */
+  button { min-height: 40px; }
+
+  /* Modal improvements */
+  .modal { width: 95vw !important; max-width: 95vw; margin: 0 auto; }
+
+  /* Flex wrapping */
+  [style*="flexWrap"] {
+    flex-wrap: wrap !important;
+  }
+}
+
+/* TABLET - Medium devices (641px to 1024px) */
+@media (min-width: 641px) and (max-width: 1024px) {
+  :root {
+    --r-md: 12px;
+  }
+
+  /* Two-column layout for tablet */
+  [style*="gridTemplateColumns='repeat(4,1fr)'"],
+  [style*="gridTemplateColumns='repeat(3,1fr)'"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  main { padding: 16px; }
+}
+
+/* DESKTOP - Large devices (1025px and up) */
+@media (min-width: 1025px) {
+  :root {
+    --r-lg: 20px;
+  }
+
+  /* Default grid sizes on desktop */
+  [style*="gridTemplateColumns='repeat(auto-fit"] {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+}
+
+/* High-density displays (Retina) */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Landscape orientation adjustments */
+@media (orientation: landscape) and (max-height: 600px) {
+  main { padding: 12px; }
+  h2 { font-size: 18px; }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  button,
+  [role="button"],
+  a { min-height: 44px; min-width: 44px; }
+
+  button::active,
+  [role="button"]::active {
+    transform: scale(0.98);
+  }
+}

@@ -6,26 +6,26 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { useToast } from '@/contexts/ToastContext'
 import { Button, Input } from '@/components/ui'
 
-const QUICK = [
-  { role:'admin_geral', label:'Admin Geral',    sub:'Acesso total ao sistema',   initial:'AG', grad:'linear-gradient(135deg,#7c3aed,#3b82f6)' },
-  { role:'admin',       label:'Administrador',  sub:'Gestão operacional',         initial:'AD', grad:'linear-gradient(135deg,#3b82f6,#06b6d4)' },
-  { role:'funcionario', label:'Funcionário',    sub:'Acesso limitado',            initial:'FN', grad:'linear-gradient(135deg,#10b981,#06b6d4)' },
-]
-
 export default function Login() {
-  const { login, quickLogin } = useAuth()
+  const { login, register } = useAuth()
   const { theme, toggle } = useTheme()
   const navigate = useNavigate()
   const toast = useToast()
+  
+  // States
+  const [mode, setMode] = useState('login') // 'login' or 'register'
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
+  const [nome, setNome]         = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading]   = useState(false)
 
-  const handleSubmit = async () => {
+  const handleSubmitLogin = async () => {
     if (!email || !password) { toast('Preencha email e senha', 'error'); return }
     setLoading(true)
     try {
       await login(email, password)
+      toast('Login realizado com sucesso', 'success')
       navigate('/dashboard')
     } catch (err) {
       toast(err.message || 'Credenciais inválidas', 'error')
@@ -34,9 +34,30 @@ export default function Login() {
     }
   }
 
-  const handleQuick = (role) => {
-    quickLogin(role)
-    navigate('/dashboard')
+  const handleSubmitRegister = async () => {
+    if (!nome || !email || !password || !confirmPassword) {
+      toast('Preencha todos os campos', 'error')
+      return
+    }
+    if (password.length < 8) {
+      toast('Senha deve ter pelo menos 8 caracteres', 'error')
+      return
+    }
+    if (password !== confirmPassword) {
+      toast('As senhas não correspondem', 'error')
+      return
+    }
+    
+    setLoading(true)
+    try {
+      await register(nome, email, password, confirmPassword)
+      toast('Conta criada com sucesso! Bem-vindo!', 'success')
+      navigate('/dashboard')
+    } catch (err) {
+      toast(err.message || 'Erro ao registar', 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -64,49 +85,47 @@ export default function Login() {
             <span style={{ color:'#fff', fontFamily:'var(--f-display)', fontWeight:800, fontSize:13 }}>CG</span>
           </div>
           <div>
-            <div style={{ fontFamily:'var(--f-display)', fontSize:20, fontWeight:800 }}>Bem-vindo de volta</div>
-            <div style={{ fontSize:13, color:'var(--text-secondary)', marginTop:4 }}>Aceda ao painel de gestão</div>
+            <div style={{ fontFamily:'var(--f-display)', fontSize:20, fontWeight:800 }}>
+              {mode === 'login' ? 'Bem-vindo de volta' : 'Criar conta'}
+            </div>
+            <div style={{ fontSize:13, color:'var(--text-secondary)', marginTop:4 }}>
+              {mode === 'login' ? 'Aceda ao painel de gestão' : 'Junte-se ao sistema CyberG'}
+            </div>
           </div>
         </div>
 
         {/* Form */}
         <div style={{ display:'flex', flexDirection:'column', gap:14, marginBottom:20 }}>
+          {mode === 'register' && (
+            <Input label="Nome completo" type="text" placeholder="João Silva" value={nome} onChange={e => setNome(e.target.value)} />
+          )}
           <Input label="Email" type="email" placeholder="admin@cyberg.ao" value={email} onChange={e => setEmail(e.target.value)} />
-          <Input label="Senha" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
-          <Button variant="primary" disabled={loading} onClick={handleSubmit} style={{ justifyContent:'center' }}>
-            {loading ? 'A entrar...' : 'Entrar'}
+          <Input label="Senha" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && (mode === 'login' ? handleSubmitLogin() : handleSubmitRegister())} />
+          {mode === 'register' && (
+            <Input label="Confirmar Senha" type="password" placeholder="••••••••" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmitRegister()} />
+          )}
+          <Button variant="primary" disabled={loading} onClick={mode === 'login' ? handleSubmitLogin : handleSubmitRegister} style={{ justifyContent:'center' }}>
+            {loading ? (mode === 'login' ? 'A entrar...' : 'A criar...') : (mode === 'login' ? 'Entrar' : 'Criar conta')}
           </Button>
         </div>
 
-        {/* Divider */}
-        <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
-          <div style={{ flex:1, height:1, background:'var(--glass-border)' }} />
-          <span style={{ fontSize:11, color:'var(--text-muted)', letterSpacing:'.06em', textTransform:'uppercase' }}>Acesso rápido</span>
-          <div style={{ flex:1, height:1, background:'var(--glass-border)' }} />
+        {/* Toggle mode */}
+        <div style={{ textAlign:'center', marginBottom:20, fontSize:13 }}>
+          <span style={{ color:'var(--text-secondary)' }}>
+            {mode === 'login' ? 'Não tem conta? ' : 'Já tem conta? '}
+          </span>
+          <button 
+            onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setNome(''); setEmail(''); setPassword(''); setConfirmPassword('') }}
+            style={{ background:'none', border:'none', color:'var(--text-primary)', fontWeight:600, cursor:'pointer', textDecoration:'underline' }}
+          >
+            {mode === 'login' ? 'Registar' : 'Fazer login'}
+          </button>
         </div>
 
-        {/* Quick login pills */}
-        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-          {QUICK.map(q => (
-            <button key={q.role} onClick={() => handleQuick(q.role)} style={{
-              display:'flex', alignItems:'center', gap:12, padding:'11px 14px',
-              borderRadius:11, background:'var(--glass-bg)', border:'1px solid var(--glass-border)',
-              cursor:'pointer', textAlign:'left', transition:'all .17s', width:'100%',
-            }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--glass-bg-hover)'; e.currentTarget.style.borderColor = 'rgba(139,92,246,.3)'; e.currentTarget.style.transform = 'translateX(3px)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'var(--glass-bg)'; e.currentTarget.style.borderColor = 'var(--glass-border)'; e.currentTarget.style.transform = 'none' }}
-            >
-              <div style={{ width:34, height:34, borderRadius:9, background:q.grad, display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:11, fontWeight:700, flexShrink:0 }}>
-                {q.initial}
-              </div>
-              <div style={{ flex:1 }}>
-                <div style={{ fontSize:13.5, fontWeight:600, color:'var(--text-primary)' }}>{q.label}</div>
-                <div style={{ fontSize:11.5, color:'var(--text-secondary)', marginTop:1 }}>{q.sub}</div>
-              </div>
-              <span style={{ color:'var(--text-muted)', fontSize:14 }}>→</span>
-            </button>
-          ))}
-        </div>
+        {mode === 'login' && (
+          <>
+          </>
+        )}
       </div>
     </div>
   )
